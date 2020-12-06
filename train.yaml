@@ -1,0 +1,16 @@
+LDI:
+  type: 'stereo'
+  size: [540, 960]
+  rendering_size: [540, 960]
+  camera:
+    camera_module: 'dataloader.sceneflow_dataloader'
+    camera_class: 'sceneflow_cameras'
+    scale: 1
+  virtual_camera:
+    T: null
+    R: null
+
+# ALGORITHM
+disp_threshold: 2.5
+camera_path: [[0.02,0, 0,0],[0.02,0.02,0],[0,0.02,0],[0,0,0]]
+#camera_path: [[0,0,0.02],[0,0, -0.02],[0,0,0],[0,0,0]]
