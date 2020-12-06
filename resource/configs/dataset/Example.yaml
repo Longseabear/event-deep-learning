@@ -1,0 +1,11 @@
+DATASET:
+  module_name: 'src.dataloader.Exampledataset'
+  class_name: 'ExampleDataset'
+  args:
+    training:
+      dataset_folder: './exampleDataset'
+    validation:
+      dataset_folder: './exampleDataset'
+    testing:
+      dataset_folder: './exampleDataset'
+

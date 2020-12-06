@@ -1,0 +1,15 @@
+DATA_LOADER:
+  required_input: ['IMAGE', "GT"]
+
+  args:
+    output_required: []
+
+    version: 1
+    training:
+      loader_args:
+        batch_size: 2
+      transforms: [ToTensor]
+    validation:
+      transforms: [ToTensor]
+    testing:
+      transforms: [ToTensor]

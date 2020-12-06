@@ -1,0 +1,6 @@
+DATASET:
+  module_name: 'src.dataloader.indoorFlyingDatasets'
+  class_name: 'IndoorFlying'
+  args:
+    dataset_folder: '/media/cvip/repo/dataset/dvs/'
+    split_number: ''
