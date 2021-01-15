@@ -3,8 +3,9 @@ import torch
 import numpy as np
 import logging
 import logging.config
-
-DEFAULT_CONFIG_PATH = "./framework/app/default_config.yaml"
+import datetime
+import os
+DEFAULT_CONFIG_PATH = "{}/default_config.yaml".format(os.path.dirname(os.path.abspath( __file__ )))
 class SingletoneInstance:
     __instance = None
 
@@ -38,6 +39,8 @@ class App(SingletoneInstance):
         if update:
             self.update(self.config)
 
+        self.name = self.name_format(self.config.App.NAME)
+
     def update(self, config):
         self.system = config.SYSTEM
 
@@ -53,3 +56,8 @@ class App(SingletoneInstance):
             self.logger.info('REPRODUCIBILITY MODE TRUE')
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
+
+    def name_format(self, name):
+        now = datetime.datetime.now()
+        return now.strftime('{}_%y%m%d_%Hh%Mm'.format(name))
+

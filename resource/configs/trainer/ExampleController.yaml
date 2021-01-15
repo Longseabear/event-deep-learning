@@ -1,0 +1,22 @@
+MODEL_CONTROLLER:
+  OPTIMIZER:
+    # ADAM
+    optimizer:
+      optimizer_module: 'torch.optim'
+      optimizer_class: 'Adam'
+      optimizer_args:
+        lr: 1e-4
+        weight_decay: 0
+        betas: (0.9, 0.999)
+        epsilon: 1e-8
+    scheduler:
+      scheduler_module: 'torch.optim.lr_scheduler'
+      scheduler_class: 'MultiStepLR'
+      scheduler_args:
+        milestones: [200]
+        gamma: 0.5
+  LOSSES:
+    image_loss_l1:
+      inputs: ['OUTPUT', 'GT']
+      loss_type: 'L1'
+      weight: 1

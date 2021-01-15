@@ -12,6 +12,10 @@ class Config(object):
             return Config(yaml.load(stream, Loader=yaml.FullLoader))
 
     @staticmethod
+    def from_dict(dict):
+        return Config(dict)
+
+    @staticmethod
     def get_empty():
         return Config()
 
@@ -71,4 +75,3 @@ class Config(object):
             else:
                 out[key] = config[key]
         return out
-

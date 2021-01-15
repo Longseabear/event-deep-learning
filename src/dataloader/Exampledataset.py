@@ -5,15 +5,15 @@ import os
 import torch
 
 class ExampleDataset(BaseDataset):
-    def __init__(self, examples=None, transform_list=[], **kwargs):
-        super().__init__(examples, transform_list, **kwargs)
+    def __init__(self, examples=None, transform_list=[], config=None):
+        super().__init__(examples, transform_list, config)
 
     @classmethod
-    def datasetFactory(cls, **args):
-        dataset_folder = args['dataset_folder']
+    def datasetFactory(cls, config):
+        dataset_folder = config['dataset_folder']
 
         img_paths = os.listdir(dataset_folder)
-        dataset: BaseDataset = cls(**args)
+        dataset: BaseDataset = cls(config)
 
         dataset._examples = [] # image1_name: path, image2_name: path class
         dataset._name2metaClass = {
@@ -47,15 +47,14 @@ if __name__ == '__main__':
     required_input = ['IMAGE', "GT"]
     def make_batch(samples):
         batchs = {}
-
         for input_name in required_input:
             batched_data = MetaData._ToBatch(samples, input_name)
             batchs[input_name] = batched_data
 
         return batchs
 
-    dataset = ExampleDataset.datasetFactory(**{"dataset_folder":'../../exampleDataset'})
+    dataset = ExampleDataset.datasetFactory({"dataset_folder":'../../exampleDataset'})
     loader = torch.utils.data.DataLoader(dataset, batch_size=2, collate_fn=make_batch)
     for batch in loader:
-        img = batch['IMAGE']._tensor
-        gt = batch['GT']._tensor
+        img = batch['IMAGE']._data
+        gt = batch['GT']._data

@@ -8,7 +8,7 @@ from torch import Tensor
 class MetaData(object):
     def __init__(self, name, tensor, **kwargs):
         self._name = name
-        self._tensor = tensor
+        self._data = tensor
         self.kwargs = kwargs
 
     @classmethod
@@ -34,25 +34,9 @@ class MetaData(object):
         assert key == datas[0][key]._name, "key different: {} != {}".format(key, datas[0][key]._name)
 
         samples = MetaData.make_empty_as(datas[0][key])
+        samples._data = torch.stack([data[key]._data for data in datas]).contiguous()
 
-        samples._tensor = torch.stack([data[key]._tensor for data in datas]).contiguous()
         return samples
-
-    @abstractmethod
-    def visualize(self):
-        raise NotImplementedError
-
-    @abstractmethod
-    def write_file(self):
-        raise NotImplementedError
-
-    @abstractmethod
-    def write_tensorboard(self):
-        raise NotImplementedError
-
-    @abstractmethod
-    def calculate_loss(self, loss, gt):
-        return loss(self._tensor, gt)
 
     @abstractmethod
     def _ToTensor(self):
@@ -102,3 +86,23 @@ class ImageMeta(MetaData):
             else:
                 raise ValueError('Image ndim must to be 3 or 4')
         return self._tensor
+
+class LossMeta(MetaData):
+    def __init__(self, name, tensor=None, **kwargs):
+        super().__init__(name, tensor, **kwargs)
+
+    @classmethod
+    def load_from_item(cls, name, item, **kwargs):
+        """:item: "img file path"
+        """
+        img = io.imread(item)
+        return cls(name, img, **kwargs)
+
+    def _device(self, d):
+        self._data.device(d)
+
+    def _ToTensor(self):
+        return torch.Tensor(self._data)
+
+    def _ToNumpy(self):
+        return self._data.item().detach().cpu()

@@ -8,16 +8,16 @@ import struct
 
 class BaseDataset(datalodaer.Dataset, metaclass=ABCMeta):
     @abstractmethod
-    def __init__(self, examples=None, transform_lists=[], required=[], **kwargs):
+    def __init__(self, examples=None, transform_lists=[], required=[], config=None):
         self._examples: list = examples
         self._name2metaClass: dict = None
         self._transformers: list = transform_lists
         self._required: list = required
-        self.args = kwargs
+        self.config = config
 
     @classmethod
     @abstractmethod
-    def datasetFactory(self, **kwargs):
+    def datasetFactory(self, config):
         raise NotImplementedError
 
     def __getitem__(self, item):

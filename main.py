@@ -14,16 +14,14 @@ def main(configs):
         config = App.instance(configs).config
         App.instance().update()
     dataloader_controller = DataLoaderController.instance()
-    dataloader = dataloader_controller.splitFactory()
+    dataloader = dataloader_controller.dataloaders
 
     for batch in dataloader['validation']:
-        img = batch['IMAGE']._tensor
-        gt = batch['GT']._tensor
+        img = batch['IMAGE']._data
+        gt = batch['GT']._data
 
 if __name__ == '__main__':
-    config_list_paths = ['resource/configs/dataloader/dataLoaderEventQueue.yaml',
-                         'resource/configs/dataset/Example.yaml']
+    config_list_paths = ['resource/configs/dataloader/dataLoaderEventQueue.yaml']
     main(config_list_paths)
-
 
 a = torch.rand(5)

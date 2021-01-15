@@ -1,0 +1,19 @@
+UPDATE_TIME: ''
+REMOVE: []
+ADD: {}
+MONITOR: {}
+ERROR: {}
+DEFAULT:
+  PRINT:
+    command: ''
+    required: []
+    args: {'content':'hello world'} # 잠시휴식 (now, framework 작성중..)
+    repeat: 8
+    when: STEP:100 # EPOCH:1
+COMMAND_TYPE:
+  PRINT:
+    command: ''
+    required: ['asdasdasd']
+    args: {}
+    repeat: 8
+    when: STEP:100

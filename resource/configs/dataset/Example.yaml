@@ -1,7 +1,10 @@
+#required= module_name, class_Name
 DATASET:
   module_name: 'src.dataloader.Exampledataset'
   class_name: 'ExampleDataset'
   args:
+    default:
+      dataset_folder: './exampleDataset'
     training:
       dataset_folder: './exampleDataset'
     validation:

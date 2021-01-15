@@ -1,47 +1,61 @@
-TRAINER:
+App:
+  NAME: 'ExampleNet'
   device: cuda # *
   gpu_ids: [0] # *
 
-DATASET:
-  module_name: ''
-  class_name: ''
-  args:
-    training:
-      dataset_folder: '/media/cvip/repo/dataset/dvs/'
-    validation:
-      dataset_folder: '/media/cvip/repo/dataset/dvs/'
-    testing:
-      dataset_folder: '/media/cvip/repo/dataset/dvs/'
+VISUALIZER:
+  request_path: 'resource/ipc/request.ipc'
+  answer_path: 'resource/ipc/answer.ipc'
 
-
+MODEL_CONTROLLER:
+  device: cuda # *
+  gpu_ids: [0] # *
+  OPTIMIZER:
+    # ADAM
+    optimizer:
+      optimizer_module: 'torch.optim'
+      optimizer_class: 'Adam'
+      optimizer_args:
+        lr: 1e-4
+        weight_decay: 0
+        betas: (0.9, 0.999)
+        epsilon: 1e-8
+    scheduler:
+      scheduler_module: 'torch.optim.lr_scheduler'
+      scheduler_class: 'MultiStepLR'
+      scheduler_args:
+        milestones: [200]
+        gamma: 0.5
+  LOSSES: {}
 
 DATA_LOADER:
   default_transform_module: 'framework.dataloader.Transform'
-  required_loader: ['training', 'validation', 'testing']
-  args:
-    version: 1
+  required_loader:
+    # NAME, args
     training:
+      dataset: 'resource/configs/dataset/Example.yaml'
+      transforms: [ToTensor]
       loader_args:
         batch_size: 1
         shuffle: True
         pin_memory: True
         num_workers: 3
     validation:
+      dataset: 'resource/configs/dataset/Example.yaml'
+      transforms: [ToTensor]
       loader_args:
         batch_size: 1
         shuffle: True
         pin_memory: True
         num_workers: 3
     testing:
+      dataset: 'resource/configs/dataset/Example.yaml'
+      transforms: [ToTensor]
       loader_args:
         batch_size: 1
         shuffle: True
         pin_memory: True
         num_workers: 3
-
-VISUALIZER:
-  request_mailspot_path: ''
-  answer_mailspot_path: ''
 
 SYSTEM:
   SEED: 42
@@ -162,21 +176,3 @@ SYSTEM:
         level: INFO
         handlers: [testing_log_handler, testing_log_console_handler]
         propagate: no
-
-
-LDI:
-  type: 'stereo'
-  size: [540, 960]
-  rendering_size: [540, 960]
-  camera:
-    camera_module: 'dataloader.sceneflow_dataloader'
-    camera_class: 'sceneflow_cameras'
-    scale: 1
-  virtual_camera:
-    T: null
-    R: null
-
-# ALGORITHM
-disp_threshold: 2.5
-camera_path: [[0.02,0, 0,0],[0.02,0.02,0],[0,0.02,0],[0,0,0]]
-#camera_path: [[0,0,0.02],[0,0, -0.02],[0,0,0],[0,0,0]]
