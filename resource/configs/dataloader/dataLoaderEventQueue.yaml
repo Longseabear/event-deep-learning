@@ -1,19 +1,16 @@
 DATA_LOADER:
-  required_input: ['IMAGE', "GT"]
   required_loader:
     training:
       dataset: 'resource/configs/dataset/Example.yaml'
       loader_args:
         batch_size: 2
-      transforms: [ToTensor]
+#      dataset_args: {}
     validation:
       dataset: 'resource/configs/dataset/Example.yaml'
-      transforms: [ToTensor]
-
     testing:
       dataset: 'resource/configs/dataset/Example.yaml'
-      transforms: [ToTensor]
-
+      transforms: [ToTensor:IMAGE-GT,]
+#      required_input: ['XX']
   args:
     output_required: []
     version: 1

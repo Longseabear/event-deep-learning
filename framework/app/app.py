@@ -4,6 +4,7 @@ import numpy as np
 import logging
 import logging.config
 import datetime
+import torch
 import os
 DEFAULT_CONFIG_PATH = "{}/default_config.yaml".format(os.path.dirname(os.path.abspath( __file__ )))
 class SingletoneInstance:
@@ -18,6 +19,10 @@ class SingletoneInstance:
         cls.__instance = cls(*args, **kargs)
         cls.instance = cls.__getInstance # Override
         return cls.__instance
+
+    @classmethod
+    def reinitialize(cls, *args, **kargs):
+        cls.__instance = cls(*args, **kargs)
 
 class App(SingletoneInstance):
     @classmethod
@@ -61,3 +66,21 @@ class App(SingletoneInstance):
         now = datetime.datetime.now()
         return now.strftime('{}_%y%m%d_%Hh%Mm'.format(name))
 
+    def get_device(self):
+        device_name = self.config.App.device
+        return device_name
+
+    def get_gpu_ids(self):
+        gpu_ids = self.config.App.gpu_ids
+        return gpu_ids
+
+    def set_gpu_device(self, module: torch.nn.Module):
+        device_name = self.config.App.device
+        gpu_ids = self.config.App.gpu_ids
+        parallel = self.config.App.parallel
+
+        device = torch.device('cpu' if device_name is 'cpu' else 'cuda')
+
+        if device_name is not 'cpu' and len(gpu_ids) > 1 and parallel is "data":
+            return torch.nn.DataParallel(module, gpu_ids).to(device)
+        return module.to(device)

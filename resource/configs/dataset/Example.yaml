@@ -4,11 +4,18 @@ DATASET:
   class_name: 'ExampleDataset'
   args:
     default:
+      required_input: ['IMAGE', 'GT']
+      transforms: ['ToTensor']
       dataset_folder: './exampleDataset'
     training:
+      required_input: ['IMAGE', 'GT']
+      transforms: ['ToTensor']
       dataset_folder: './exampleDataset'
     validation:
+      required_input: ['IMAGE', 'GT']
+      transforms: ['ToTensor']
       dataset_folder: './exampleDataset'
     testing:
+      required_input: ['IMAGE', 'GT']
+      transforms: ['ToTensor']
       dataset_folder: './exampleDataset'
-

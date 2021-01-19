@@ -2,6 +2,7 @@ App:
   NAME: 'ExampleNet'
   device: cuda # *
   gpu_ids: [0] # *
+  parallel: 'data' #  model
 
 VISUALIZER:
   request_path: 'resource/ipc/request.ipc'
@@ -18,8 +19,8 @@ MODEL_CONTROLLER:
       optimizer_args:
         lr: 1e-4
         weight_decay: 0
-        betas: (0.9, 0.999)
-        epsilon: 1e-8
+        betas: [0.9, 0.999]
+        eps: 1e-8
     scheduler:
       scheduler_module: 'torch.optim.lr_scheduler'
       scheduler_class: 'MultiStepLR'
@@ -29,7 +30,9 @@ MODEL_CONTROLLER:
   LOSSES: {}
 
 DATA_LOADER:
+  required_input: []
   default_transform_module: 'framework.dataloader.Transform'
+  default_transforms: []
   required_loader:
     # NAME, args
     training:

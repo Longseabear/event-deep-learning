@@ -1,6 +1,12 @@
 from importlib import import_module
 from framework.trainer.ModelController import ModelController
+from framework.dataloader.TensorTypes import TensorType
+import matplotlib.pyplot as plt
 import sys
+import numpy as np
+import torch
+from framework.dataloader.Transform import TRANSFORM
+from framework.dataloader.TensorTypes import *
 
 class CommandFactory(object):
     @staticmethod
@@ -21,6 +27,7 @@ class Command(object):
     def __init__(self, name, config):
         self.name = name
         self.config = config
+        self.valid_type = []
 
         self.state, self.step = self.config.when.split(':')
         self.step = int(self.step)
@@ -32,7 +39,7 @@ class Command(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is not None:
-            self.config.ERROR= '{} {} {}'.format(exc_type, exc_val, exc_tb)
+            self.config.ERROR = '{} {} {}'.format(exc_type, exc_val, exc_tb)
             print(self.config.ERROR)
         return '{} {} {}'.format(exc_type, exc_val, exc_tb)
 
@@ -40,8 +47,8 @@ class Command(object):
         return self
 
     def valid(self, sample):
-        model_info = ModelController.instance().model_variable
-        if self.state != model_info['state'] or model_info['step'] % self.step != 0:
+        model_info = ModelController.instance().state
+        if self.state != model_info.state or model_info.step % self.step != 0:
             return False
         return True
 
@@ -54,17 +61,34 @@ class PrintCommand(Command):
             return
         print('PRINT MODULE: ', sep=' ')
         for name in self.config.required:
-            print(name, sample[name]._data, sep=' ')
+            print(name, sample[name], sep=' ')
         return
 
+class BatchedImageShow(Command):
+    def __init__(self, name, config):
+        super().__init__(name, config)
+        self.numpy_trasnsform = TRANSFORM['ToNumpy']([name + "_output" for name in self.config.required], {'ALL': IMAGE()})
+
+    def run(self, sample):
+        if not super(BatchedImageShow, self).valid(sample):
+            return
+
+        temp_sample = {}
+        for name in self.config.required:
+            temp_sample[name + "_output"] = sample[name]
+        temp_sample = self.numpy_trasnsform(temp_sample)
+
+        for key in temp_sample.keys():
+            plt.imshow(temp_sample[key][self.config.args.batch_number])
+            plt.show()
+        return
 
 if __name__ == '__main__':
     import sys
-    from framework.dataloader.MetaData import ImageMeta
     from utils.config import Config
-    a = CommandFactory.make_command('name', Config.from_dict({'command':'PrintCommand',
+    a = CommandFactory.make_command('name', Config.from_dict({'command':'BatchedImageShow',
                                              'repeat':5,
-                                             'args':{},
+                                             'args':{'batch_number':1},
                                              'when':'INIT:100',
                                              'required': ['img','t']}))
 
@@ -73,7 +97,8 @@ if __name__ == '__main__':
         model_info['step'] += 1
         try:
             with a as f:
-                f.run({'img': ImageMeta('af', -1)})
+                f.run({'img': torch.ones((3,3,8,8)),
+                       't': torch.zeros((3,3,8,8))})
                 f.update()
         except Exception as e:
             print(e, 'a')

@@ -1,4 +1,10 @@
 MODEL_CONTROLLER:
+  MODULE_NAME: 'src.trainer.ExampleController'
+  CLASS_NAME: 'ExampleContoller'
+
+  MODEL:
+    MODEL_CONFIG_PATH: 'resource/model/SimpleLayerModel.yaml'
+
   OPTIMIZER:
     # ADAM
     optimizer:
@@ -7,8 +13,8 @@ MODEL_CONTROLLER:
       optimizer_args:
         lr: 1e-4
         weight_decay: 0
-        betas: (0.9, 0.999)
-        epsilon: 1e-8
+        betas: [0.9, 0.999]
+        eps: 1e-8
     scheduler:
       scheduler_module: 'torch.optim.lr_scheduler'
       scheduler_class: 'MultiStepLR'
