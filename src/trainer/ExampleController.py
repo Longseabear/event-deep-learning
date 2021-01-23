@@ -11,28 +11,37 @@ class ExampleContoller(ModelController):
     def __init__(self):
         super(ExampleContoller, self).__init__()
 
-        self.model = BaseModel.model_factory(self.config.MODEL.MODEL_CONFIG_PATH)
-        self.model = App.instance().set_gpu_device(self.model)
+        self.MODEL = BaseModel.model_factory(self.config.MODEL.MODEL_CONFIG_PATH)
+        self.MODEL = App.instance().set_gpu_device(self.MODEL)
 
-        print(self.model.description())
-        if self.model is not None:
-            self.optimizer = make_optimizer(self.config.OPTIMIZER, self.model)
+        print(self.MODEL.description())
+        if self.MODEL is not None:
+            self.OPTIMIZER = make_optimizer(self.config.OPTIMIZER, self.MODEL)
 
-    def state_init_run(self):
-        super(ExampleContoller, self).state_init_run()
+        self.all_callable = [method_name for method_name in dir(self) if callable(getattr(self, method_name))]
 
-    def state_step_run(self):
-        super(ExampleContoller, self).state_step_run()
-
-        # Learning Process 화장실
-        pbar = tqdm(self.loader)
-        for samples in pbar:
-            samples = self.model(samples)
-            self.optimizer.zero_grad()
-            loss = self.loss(samples)
-            pbar.set_postfix_str("loss: {}".format(loss))
+    def train(self):
+        try:
+            model_state = self.get_state()
+            self.sample = next(model_state.iter)
+            self.sample = self.MODEL(self.sample)
+            self.OPTIMIZER.zero_grad()
+            loss = self.LOSSES(self.sample)
+            model_state.tqdm.set_postfix_str("loss: {}".format(loss))
             loss.backward()
-            self.optimizer.step()
+            self.OPTIMIZER.step()
+        except StopIteration:
+            return {'state_name': 'EPOCH_END'}
+        return
 
-    def state_end_run(self):
-        super(ExampleContoller, self).state_end_run()
+    def test(self):
+        try:
+            with torch.no_grad():
+                model_state = self.get_state()
+                self.sample = next(model_state.iter)
+                self.sample = self.MODEL(self.sample)
+                loss = self.LOSSES(self.sample)
+                model_state.tqdm.set_postfix_str("loss: {}".format(loss))
+        except StopIteration:
+            return {'state_name': 'EPOCH_END'}
+        return

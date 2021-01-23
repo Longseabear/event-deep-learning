@@ -4,8 +4,11 @@ import numpy as np
 import logging
 import logging.config
 import datetime
+import sys
 import torch
 import os
+
+
 DEFAULT_CONFIG_PATH = "{}/default_config.yaml".format(os.path.dirname(os.path.abspath( __file__ )))
 class SingletoneInstance:
     __instance = None
@@ -23,6 +26,10 @@ class SingletoneInstance:
     @classmethod
     def reinitialize(cls, *args, **kargs):
         cls.__instance = cls(*args, **kargs)
+
+    @classmethod
+    def assign_instance(cls, instance):
+        cls.__instance = instance
 
 class App(SingletoneInstance):
     @classmethod
@@ -44,7 +51,31 @@ class App(SingletoneInstance):
         if update:
             self.update(self.config)
 
-        self.name = self.name_format(self.config.App.NAME)
+        self.name = self.config.App.NAME
+        self.mode = self.config.App.mode
+
+        base = self.config.App.save_dir
+        model_name = self.name
+        experiment_name = self.config.App.EXPERIMENT_NAME
+        if self.mode == 'finetuning':
+            if os.path.exists(os.path.join(base, model_name, experiment_name)):
+                experiment_name = self.name_format(experiment_name)
+            base_path = os.path.join(base, model_name, experiment_name)
+            self.config.App.base_path = base_path
+            print('[INFO] Now App mode is {}, Since the directory already exists, a new folder {} is created.'.format(self.mode,
+                                                                                                                      self.config.App.base_path))
+        elif self.mode == 'new':
+            if os.path.exists(os.path.join(base, model_name, experiment_name)):
+                experiment_name = self.name_format(experiment_name)
+            base_path = os.path.join(base, model_name, experiment_name)
+            self.config.App.base_path = base_path
+            print('[INFO] Now App mode is {}, Since the directory already exists, a new folder {} is created.'.format(self.mode,
+                                                                                                                      self.config.App.base_path))
+        elif self.mode == 'resume':
+            if not os.path.exists(self.config.App.base_path):
+                raise FileExistsError
+        else:
+            raise NotImplementedError
 
     def update(self, config):
         self.system = config.SYSTEM
@@ -66,6 +97,10 @@ class App(SingletoneInstance):
         now = datetime.datetime.now()
         return now.strftime('{}_%y%m%d_%Hh%Mm'.format(name))
 
+    def current_time_format(self):
+        now = datetime.datetime.now()
+        return now.strftime('[%y%m%d_%Hh%Mm]'.format())
+
     def get_device(self):
         device_name = self.config.App.device
         return device_name
@@ -84,3 +119,22 @@ class App(SingletoneInstance):
         if device_name is not 'cpu' and len(gpu_ids) > 1 and parallel is "data":
             return torch.nn.DataParallel(module, gpu_ids).to(device)
         return module.to(device)
+
+    def get_base_path(self):
+        return self.config.App.base_path
+
+    def make_save_dir(self, name, path=None):
+        if path == None:
+            path = self.config.App.base_path
+        os.makedirs(os.path.join(path, name), exist_ok=True)
+
+    def smart_write(self, contents, dst, mode=None):
+        if isinstance(dst, str):
+            if dst == 'stdout':
+                sys.stdout.write(contents)
+            else:
+                with open(dst, mode) as f:
+                    f.write(contents)
+        else:
+            with open(dst, mode) as f:
+                f.write(contents)

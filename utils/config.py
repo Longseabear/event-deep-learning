@@ -48,6 +48,12 @@ class Config(object):
             else:
                 self.__dict__[key] = dict_config[key]
 
+    def get(self, key, default, possible_none=True):
+        out = self.__dict__.get(key, default)
+        if possible_none is False and out is None:
+            return default
+        return out
+
     def keys(self):
         return self.__dict__.keys()
 
@@ -69,6 +75,9 @@ class Config(object):
     def __repr__(self):
         return repr(self.__dict__)
 
+    def copy(self):
+        return Config.from_dict(self.extraction_dictionary(self))
+
     def update(self, dict_config):
         for key in dict_config.keys():
             if key in self.__dict__.keys():
@@ -78,6 +87,7 @@ class Config(object):
                     self.__dict__[key] = dict_config[key]
             else:
                 self.__setitem__(key, dict_config[key])
+        return self
 
     @classmethod
     def extraction_dictionary(cls, config):

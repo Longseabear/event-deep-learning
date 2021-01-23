@@ -1,19 +1,77 @@
-UPDATE_TIME: ''
-REMOVE: []
-ADD: {}
-MONITOR: {}
-ERROR: {}
-DEFAULT:
-  PRINT:
-    command: ''
-    required: []
-    args: {'content':'hello world'}
-    repeat: 8
-    when: STEP:100 # EPOCH:1
-COMMAND_TYPE:
-  PRINT:
-    command: ''
-    required: ['asdasdasd']
+DEFAULT: [TRAINING_LOADER->PrintAllState, VALIDATION_LOADER, train_step->PRINT, val_step]
+
+COMMAND_DEFINE:
+  TRAINING_LOADER:
+    command: 'PushModelStateCommand'
+    required: ['training']
+    state_name: START
+    loader_name: 'idle'
     args: {}
-    repeat: 8
-    when: STEP:100
+    repeat: 1
+    when: step # EPOCH:1
+  VALIDATION_LOADER:
+    command: 'PushModelStateCommand'
+    required: ['validation']
+    state_name: EPOCH_END
+    loader_name: training
+    args: {}
+    repeat: -1
+    when: epoch # EPOCH:1
+  PrintAllState:
+    command: 'PrintStateCommand'
+    required: ['step', 'epoch', 'state_name']
+    args: {}
+    repeat: -1
+    when: step # EPOCH:1
+  train_step:
+    command: 'RunCommand'
+    required: ['train']
+    loader_name: 'training'
+    state_name: BATCH_START
+    args: {}
+    repeat: -1
+    when: step # EPOCH:1
+  val_step:
+    command: 'RunCommand'
+    required: ['test']
+    loader_name: 'validation'
+    state_name: BATCH_START
+    args: {}
+    repeat: -1
+    when: step # EPOCH:1
+  PRINT:
+    command: 'PrintCommand'
+    required: []
+    args: {'content':'name 1'}
+    state_name: null
+    loader_name: null
+    repeat: 10
+    when: step # EPOCH:1
+  PRINT2:
+    parent: 'PRINT'
+    args: {'content':'name 2', 'test':{'a':3}}
+    state_name: 'RUN'
+    repeat: 3
+    when: step:100 # EPOCH:1
+  TRAINING_OUTPUT_SHOW:
+    command: 'BatchedImageShowCommand'
+    required: ['OUTPUT']
+    args: {
+        batch_number: 0
+    }
+    state_name: EPOCH_END
+    loader_name: training
+    repeat: 1
+    when: epoch # EPOCH:1
+  TRAINING_OUTPUT_SAVE:
+    command: 'BatchedImageSaveCommand'
+    required: ['OUTPUT']
+    args: {
+      base_path: null,
+      folder_name: null,
+      format: null
+    }
+    state_name: BATCH_END
+    loader_name: training
+    repeat: -1
+    when: step:10 # EPOCH:1

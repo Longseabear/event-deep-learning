@@ -32,7 +32,7 @@ class ToNumpy(Transforms):
             data = samples[sample]
             meta_data = self.meta[sample]
             if isinstance(meta_data, IMAGE):
-                samples[sample] = data.permute((0,2,3,1)).cpu()
+                samples[sample] = data.permute((0,2,3,1)).cpu().detach().numpy()
             else:
                 raise NotImplementedError
         return samples

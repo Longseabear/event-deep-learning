@@ -1,16 +1,17 @@
 App:
   NAME: 'ExampleNet'
+  EXPERIMENT_NAME: 'scenario1'
   device: cuda # *
   gpu_ids: [0] # *
   parallel: 'data' #  model
-
-VISUALIZER:
-  request_path: 'resource/ipc/request.ipc'
-  answer_path: 'resource/ipc/answer.ipc'
+  save_dir: 'resource/output/'
+  mode: 'new' # new, finetuning, resume
 
 MODEL_CONTROLLER:
-  device: cuda # *
-  gpu_ids: [0] # *
+  COMMAND_CONTROLLER:
+    command_path: 'resource/ipc/default_command.yaml'
+
+  MODEL_STATE_CONTROLLER: {}
   OPTIMIZER:
     # ADAM
     optimizer:
@@ -35,8 +36,23 @@ DATA_LOADER:
   default_transforms: []
   required_loader:
     # NAME, args
+    default:
+      config:
+        reload: true
+        mode: eval
+        obj_epoch: 1
+      transforms: [ToTensor]
+      loader_args:
+        batch_size: 1
+        shuffle: False
+        pin_memory: True
+        num_workers: 3
     training:
       dataset: 'resource/configs/dataset/Example.yaml'
+      config:
+        reload: false
+        mode: train
+        obj_epoch: 10
       transforms: [ToTensor]
       loader_args:
         batch_size: 1

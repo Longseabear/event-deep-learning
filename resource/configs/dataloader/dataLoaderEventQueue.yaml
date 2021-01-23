@@ -1,13 +1,23 @@
 DATA_LOADER:
   required_loader:
+    default:
+      dataset: 'resource/configs/dataset/Example.yaml'
     training:
       dataset: 'resource/configs/dataset/Example.yaml'
+      config:
+        reload: false
+        mode: train
+        obj_epoch: 5
       loader_args:
-        batch_size: 2
+        batch_size: 1
 #      dataset_args: {}
     validation:
+      config:
+        reload: false
       dataset: 'resource/configs/dataset/Example.yaml'
     testing:
+      config:
+        reload: false
       dataset: 'resource/configs/dataset/Example.yaml'
       transforms: [ToTensor:IMAGE-GT,]
 #      required_input: ['XX']

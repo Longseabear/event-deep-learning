@@ -21,6 +21,7 @@ MODEL_CONTROLLER:
       scheduler_args:
         milestones: [200]
         gamma: 0.5
+
   LOSSES:
     image_loss_l1:
       inputs: ['OUTPUT', 'GT']

@@ -1,105 +1,148 @@
 from importlib import import_module
-from framework.trainer.ModelController import ModelController
-from framework.dataloader.TensorTypes import TensorType
-import matplotlib.pyplot as plt
 import sys
-import numpy as np
-import torch
-from framework.dataloader.Transform import TRANSFORM
-from framework.dataloader.TensorTypes import *
 
+import abc
+from utils.config import Config
+from collections import defaultdict
+
+
+class Command(object):
+    def __init__(self, name, config):
+        self.name = name
+        self.config = config
+        self.live = True
+        if len(self.config.when.split(':')) > 1:
+            self.attribute, self.step = self.config.when.split(':')
+            self.step = int(self.step)
+        else:
+            self.attribute = self.config.when
+            self.step = 1
+        self.state_name = self.config.state_name if 'state_name' in self.config.keys() else None
+        self.loader_name = self.config.loader_name if 'loader_name' in self.config.keys() else None
+        self.config.repeat = int(self.config.repeat)
+
+    def update(self):
+        if self.config.repeat > 0:
+            self.config.repeat -= 1
+        if self.config.repeat == 0:
+            self.live = False
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            self.config.ERROR = Exception(exc_type,exc_val, exc_tb)
+            self.live = False
+            raise Exception(exc_type,exc_val, exc_tb)
+
+    def __enter__(self):
+        return self
+
+    def valid(self, controller):
+        model_state = controller.get_state()
+        if model_state.__getattribute__(self.attribute) % self.step != 0:
+            return False
+        return True
+
+    @abc.abstractmethod
+    def run(self, controller):
+        raise NotImplementedError
+
+    def leave(self):
+        return self.live
+
+class CommandSet(object):
+    def __init__(self, commands):
+        self.commands = commands
+        self.name = commands[0].name
+
+from .commands import *
+'''
+  PRINT:
+    command: 'PrintCommand'
+    required: []
+    args: {'content':'name 1'}
+    repeat: 1 # if -1, loop
+    when: STEP:100 #  // START INIT STEP END TERMINATE
+    target: training #(dataloader)
+'''
 class CommandFactory(object):
     @staticmethod
     def make_command(name, config):
         current_module = sys.modules[__name__]
         return getattr(current_module, config.command)(name, config)
 
-class CommandController(object):
-    def __init__(self):
-        self.commands = []
+class CommandController():
+    def __init__(self, command_path, controller):
+        self.controller = controller
+        self.command_state = Config.from_yaml(command_path)
+        self.command_define = self.command_state.COMMAND_DEFINE
+        self.commands = defaultdict(lambda: defaultdict(list))
+        self.changed = None
+        self.command_objects = {}
 
-    def run(self, *args, **kwargs):
-        for command in self.commands:
-            command: Command
-            # with command as cs:
+        for command_name in self.command_state['DEFAULT']:
+            self.command_parsing(command_name)
 
-class Command(object):
-    def __init__(self, name, config):
-        self.name = name
-        self.config = config
-        self.valid_type = []
+    def load_command(self, command_name):
+        command_args = self.get_argument(self.command_define[command_name])
+        self.command_objects[command_name] = CommandFactory.make_command(command_name, command_args)
+        return self.command_objects[command_name]
 
-        self.state, self.step = self.config.when.split(':')
-        self.step = int(self.step)
-        self.config.repeat = int(self.config.repeat)
+    def command_parsing(self, command_name):
+        if len(command_name.split("->")) > 1:
+            commands_name_lists = command_name.split("->")
+            command_args = self.get_argument(self.command_define[commands_name_lists[0]])
+            loader_name = command_args.get('loader_name', 'global', False)
+            state_name = command_args.get('state_name', 'global', False)
+            self.commands[loader_name][state_name].append(CommandSet([self.load_command(c) for c in commands_name_lists]))
+        else:
+            command_args = self.get_argument(self.command_define[command_name])
+            loader_name = command_args.get('loader_name', 'global', False)
+            state_name = command_args.get('state_name', 'global', False)
+            self.commands[loader_name][state_name].append(self.load_command(command_name))
 
-    def update(self):
-        if self.config.repeat > 0:
-            self.config.repeat -= 1
+    def get_argument(self, command_arg):
+        arg = Config.get_empty()
+        if 'parent' in command_arg.keys():
+            arg = self.get_argument(self.command_define[command_arg.parent])
+        arg.update(command_arg)
+        return arg
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type is not None:
-            self.config.ERROR = '{} {} {}'.format(exc_type, exc_val, exc_tb)
-            print(self.config.ERROR)
-        return '{} {} {}'.format(exc_type, exc_val, exc_tb)
+    def register(self):
+        pass
 
-    def __enter__(self):
-        return self
+    def commands_run(self, commands: list):
+        next_command = []
+        for command in commands:
+            if isinstance(command, CommandSet):
+                if len(command.commands)<=0:
+                    continue
+                self.commands_run(command.commands)
+                next_command.append(command)
+                continue
+            try:
+                with command as c:
+                    if c.valid(self.controller) and c.live:
+                        out = c.run(self.controller)
+                        if out is not None: self.changed.update(out)
+                        c.update()
+                    if command.leave(): next_command.append(command)
+            except Exception as e:
+                # remove them
+                print(e, '[{}]', command.name)
+                pass
+        commands.clear()
+        commands += next_command
 
-    def valid(self, sample):
-        model_info = ModelController.instance().state
-        if self.state != model_info.state or model_info.step % self.step != 0:
-            return False
-        return True
+    def run(self):
+        self.changed = {}
 
-class PrintCommand(Command):
-    def __init__(self, name, config):
-        super().__init__(name, config)
+        model_state = self.controller.get_state()
+        state_name = model_state.state_name
+        loader_name = model_state.loader_name
 
-    def run(self, sample):
-        if not super(PrintCommand, self).valid(sample):
-            return
-        print('PRINT MODULE: ', sep=' ')
-        for name in self.config.required:
-            print(name, sample[name], sep=' ')
-        return
+        self.commands_run(self.commands[loader_name][state_name])
+        self.commands_run(self.commands[loader_name]['global'])
+        self.commands_run(self.commands['global'][state_name])
+        self.commands_run(self.commands['global']['global'])
+        return self.changed
 
-class BatchedImageShow(Command):
-    def __init__(self, name, config):
-        super().__init__(name, config)
-        self.numpy_trasnsform = TRANSFORM['ToNumpy']([name + "_output" for name in self.config.required], {'ALL': IMAGE()})
-
-    def run(self, sample):
-        if not super(BatchedImageShow, self).valid(sample):
-            return
-
-        temp_sample = {}
-        for name in self.config.required:
-            temp_sample[name + "_output"] = sample[name]
-        temp_sample = self.numpy_trasnsform(temp_sample)
-
-        for key in temp_sample.keys():
-            plt.imshow(temp_sample[key][self.config.args.batch_number])
-            plt.show()
-        return
-
-if __name__ == '__main__':
-    import sys
-    from utils.config import Config
-    a = CommandFactory.make_command('name', Config.from_dict({'command':'BatchedImageShow',
-                                             'repeat':5,
-                                             'args':{'batch_number':1},
-                                             'when':'INIT:100',
-                                             'required': ['img','t']}))
-
-    model_info = ModelController.instance().model_variable
-    for i in range(300):
-        model_info['step'] += 1
-        try:
-            with a as f:
-                f.run({'img': torch.ones((3,3,8,8)),
-                       't': torch.zeros((3,3,8,8))})
-                f.update()
-        except Exception as e:
-            print(e, 'a')
-            pass

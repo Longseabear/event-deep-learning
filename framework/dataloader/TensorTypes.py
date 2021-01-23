@@ -12,6 +12,9 @@ class IMAGE(TensorType):
     def image_loader(self, path):
         return misc.imread(path)/255.
 
+    def image_saver(self, path, data):
+        return misc.imsave(path, data)
+
     def getSample(self, sample):
         return self.image_loader(sample)
 

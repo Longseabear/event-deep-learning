@@ -4,15 +4,9 @@ from typing import *
 from abc import abstractmethod
 from utils.config import Config
 from framework.app.app import App
-"""
-        device = torch.device('cpu' if args.cpu else 'cuda')
-        self.loss_module.to(device)
-        if args.precision == 'half': self.loss_module.half()
-        if not args.cpu and args.n_GPUs > 1:
-            self.loss_module = nn.DataParallel(
-                self.loss_module, range(args.n_GPUs)
-            )
-"""
+import os
+import sys
+
 class LossFactory(object):
     @staticmethod
     def instantiate_loss(name, config):
@@ -45,6 +39,20 @@ class LossContainer(nn.Module):
         self.total_loss(total_loss)
         return total_loss
 
+    def save(self, info):
+        state = info['state']
+        contents = App.instance().current_time_format() + " {} epoch, {} step\n".format(state.epoch, state.step)
+        contents += "|{}: {}\t".format('Total', str(self.total_loss))
+        for key in self.loss_dict.keys():
+            contents += "|{}: {}\t".format(key, str(self.loss_dict[key]))
+        App.instance().smart_write(contents + '\n', info['path'], 'a+')
+
+    def load(self):
+        pass
+
+    def get_dir(self, dir_path):
+        return os.path.join(dir_path, 'loss.txt')
+
 class BaseLoss(nn.Module):
     def __init__(self, name=None, config=None):
         super(BaseLoss, self).__init__()
@@ -53,13 +61,6 @@ class BaseLoss(nn.Module):
         self.name = name
         self.weight = config.weight
         self.required = config.inputs
-
-        self.register_buffer('sum', torch.zeros(1))
-        self.register_buffer('count', torch.zeros(1))
-
-    def reset(self):
-        self.sum = torch.zeros(1)
-        self.count = torch.zeros(1)
 
     @abstractmethod
     def __str__(self):
@@ -74,6 +75,9 @@ class L1Loss(BaseLoss):
         super().__init__(name, config)
         self.loss = nn.L1Loss()
 
+        self.register_buffer('sum', torch.zeros(1))
+        self.register_buffer('count', torch.zeros(1))
+
     def forward(self, pred, target):
         loss = self.loss(pred, target)
         self.update_state(loss)
@@ -84,11 +88,16 @@ class L1Loss(BaseLoss):
         self.count += 1
 
     def __str__(self):
-        return str(self.sum/self.count)
+        if self.count==0:
+            return "0"
+        return str(self.sum.item()/self.count.item())
 
 class LossEmpty(BaseLoss):
     def __init__(self, name, config=None):
         super().__init__(name, Config.from_dict({'weight':1, 'inputs':None}))
+
+        self.register_buffer('sum', torch.zeros(1))
+        self.register_buffer('count', torch.zeros(1))
 
     def forward(self, loss):
         self.update_state(loss)
@@ -98,7 +107,9 @@ class LossEmpty(BaseLoss):
         self.count += 1
 
     def __str__(self):
-        return str(self.sum/self.count)
+        if self.count==0:
+            return "0"
+        return str(self.sum.item()/self.count.item())
 
 if __name__ == '__main__':
     config = Config.from_yaml('../../reso   urce/configs/trainer/ExampleController.yaml')
