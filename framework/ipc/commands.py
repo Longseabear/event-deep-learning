@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import copy
 from framework.app.app import App
-from framework.app.Format import Formatter
+from framework.app.Format import *
 from framework.dataloader.Transform import TRANSFORM
 from framework.dataloader.TensorTypes import *
 from framework.dataloader.DataLoader import DataLoaderController
@@ -13,6 +13,12 @@ import scipy.misc as misc
 from framework.ipc.ThreadCommand import *
 from utils.config import Config
 import os
+
+def write_log(contents, controller, **kwargs):
+    if controller.get_state().tqdm is None:
+        print(contents, **kwargs)
+    else:
+        controller.get_state().tqdm.write(contents, **kwargs)
 
 class RunCommand(Command):
     def __init__(self, name, config):
@@ -32,9 +38,9 @@ class PrintCommand(Command):
         super().__init__(name, config)
 
     def run(self, controller):
-        print('PRINT MODULE: {}'.format(self.config.args.content), sep=' ')
+        write_log('PRINT MODULE: {}'.format(self.config.args.content), controller, end=' ')
         for name in self.config.required:
-            print(name, controller.sample[name], sep=' ')
+            write_log(name + " " + controller.sample[name], controller)
 
 class PrintStateCommand(Command):
     def __init__(self, name, config):
@@ -42,8 +48,9 @@ class PrintStateCommand(Command):
 
     def run(self, controller):
         if controller.get_state().tqdm is not None:
-            controller.get_state().tqdm.write('[{}/{}]: {}'.format(controller.get_state().loader_name, controller.get_state().state_name,
-                                       [(name,controller.get_state().__getattribute__(name)) for name in self.config.required]))
+            write_log('[{}/{}]: {}'.format(controller.get_state().loader_name, controller.get_state().state_name,
+                                       [(name,controller.get_state().__getattribute__(name)) for name in self.config.required]),
+                      controller)
 
 class BatchedImageShowCommand(Command):
     def __init__(self, name, config):
@@ -62,16 +69,19 @@ class BatchedImageShowCommand(Command):
 
 class PushModelStateCommand(Command):
     def __init__(self, name, config):
-        super().__init__(name, Config.from_dict({}).update(config))
+        super().__init__(name, config)
 
     def run(self, controller):
         add_state_info = []
         for name in self.config.required:
-            args = self.config.args[name] if name in self.config.args.keys() else None
+            args = copy.deepcopy(self.config.args[name]) if name in self.config.args.keys() else None
             add_state_info.append((name, args))
         return {'push_state': add_state_info}
 
-import queue
+
+def dir_path_parser(path):
+    return os.path.join(*App.instance().variable_parsing(path, '/'))
+
 class BatchedImageSaveCommand(Command):
     def __init__(self, name, config):
         super().__init__(name, config)
@@ -82,18 +92,19 @@ class BatchedImageSaveCommand(Command):
         if self.live or not MultipleProcessorController.instance().finished(self.__class__.__name__):
             return True
         else:
-            MultipleProcessorController.instance().remove_process(self.__class__.__name__)
             return False
+
+    def destroy(self):
+        MultipleProcessorController.instance().remove_process(self.__class__.__name__)
 
     def run(self, controller):
         args = []
-        base_path = self.config.args.get('base_path', App.instance().get_base_path(), possible_none=False)
-        folder = self.config.args.get('folder_name', 'visual/img', possible_none=False)
+        dir_path = dir_path_parser(self.config.args.get('path', '$base/visual/img', possible_none=False))
         fm = self.config.args.get('format', 'png', possible_none=False)
 
-        App.instance().make_save_dir(folder, base_path)
-
-        formatter = Formatter(controller, {'content': '', 'format': fm, 'batch':0})
+        App.instance().make_save_dir(dir_path)
+        formatter = MainStateBasedFormatter(controller, {'content': '', 'format': fm, 'batch':0},
+                              format='[$main:epoch:03]e_[$main:step:08]s_[$content]_[$batch].[$format]')
         for name in self.config.required:
             formatter.contents['content'] = name
             imgs = self.numpy_trasnsform({name:controller.sample[name].clone()})
@@ -101,8 +112,7 @@ class BatchedImageSaveCommand(Command):
             b,_,_,_ = imgs[name].shape
             for i in range(b):
                 formatter.contents['batch'] = str(i).zfill(4)
-                path = os.path.join(base_path, folder,
-                                    formatter.MainStateBasedFormatting('[$main:epoch:03]e_[$main:step:08]s_[$content]_[$batch].[$format]'))
+                path = os.path.join(dir_path, formatter.Formatting())
                 args.append((path, imgs[name][i]))
 
         import time
@@ -114,3 +124,64 @@ class BatchedImageSaveCommand(Command):
                 misc.imsave(path, img)
                 time.sleep(0.001)
         MultipleProcessorController.instance().push_data(self.__class__.__name__, batched_image_save, args, num_worker=1)
+
+class ModuleLoadClass(Command):
+    def __init__(self, name, config):
+        super().__init__(name, config)
+
+    def run(self, controller):
+        for name in self.config.required:
+            args = copy.deepcopy(self.config.args[name])
+            args['module_name'] = name
+            args['controller'] = controller
+            args['path'] = args.get('path', '$latest_{}'.format(name), possible_none=False)
+            args['load_strict'] = args.get('load_strict', True)
+
+            try:
+                if args['path'] == '$latest':
+                    args['path'] = args['path'] + '_{}'.format(name)
+                args['path'] = dir_path_parser(args['path'])
+            except KeyError as e:
+                raise ValueError('App.variables load error. key:{}'.format(args['path']))
+
+            if name not in dir(controller):
+                write_log('[ERROR] Load fail: {} is not Modules.'.format(name), controller)
+                continue
+
+            module = controller.__getattribute__(name)
+            if not isinstance(module, torch.nn.Module):
+                write_log('[ERROR] Load fail: {} is not Modules'.format(name), controller)
+                continue
+            if not callable(getattr(module, 'load')):
+                write_log('[ERROR] Load fail: {} must to have load method.'.format(name), controller)
+                continue
+            module.load(args)
+            write_log('[INFO] {} Load scucesses [{}] '.format(self.config.required, args['path']), controller)
+
+class ModuleSaveClass(Command):
+    def __init__(self, name, config):
+        super().__init__(name, config)
+
+    def run(self, controller):
+        for name in self.config.required:
+            if name not in dir(controller):
+                write_log('[ERROR] save fail: {} is not Modules.'.format(name), controller)
+                continue
+
+            args = copy.deepcopy(self.config.args[name])
+            args['module_name'] = name
+            args['controller'] = controller
+            args['path'] = dir_path_parser(args.get('path', '$base/ckpt_{}'.format(name), possible_none=False))
+
+            module = controller.__getattribute__(name)
+            if not isinstance(module, torch.nn.Module):
+                write_log('[ERROR] save fail: {} is not Modules'.format(name), controller)
+                continue
+            if not callable(getattr(module, 'save')):
+                write_log('[ERROR] save fail: {} must to have save method.'.format(name), controller)
+                continue
+
+            module.save(args)
+            write_log('[INFO] {} Save scucesses [{}] '.format(self.config.required, App.instance().get_variables('$latest_{}'.format(name))), controller)
+
+

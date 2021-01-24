@@ -1,6 +1,7 @@
 import os
 import yaml
 import re
+import copy
 
 loader = yaml.FullLoader
 loader.add_implicit_resolver(
@@ -49,6 +50,13 @@ class Config(object):
                 self.__dict__[key] = dict_config[key]
 
     def get(self, key, default, possible_none=True):
+        """
+        same dictionary.get. this method Configruation Not safe!!!
+        :param key:
+        :param default:
+        :param possible_none: if true, None also returned
+        :return:
+        """
         out = self.__dict__.get(key, default)
         if possible_none is False and out is None:
             return default
@@ -79,14 +87,22 @@ class Config(object):
         return Config.from_dict(self.extraction_dictionary(self))
 
     def update(self, dict_config):
+        """
+        Combines the current configuration with the parameter configuration.
+        This operation performs a deepcopy on the parameter configuration.
+        Therefore, it is configuration safe.
+
+        :param dict_config:
+        :return:
+        """
         for key in dict_config.keys():
             if key in self.__dict__.keys():
                 if isinstance(dict_config[key], Config):
                     self.__dict__[key].update(dict_config[key])
                 else:
-                    self.__dict__[key] = dict_config[key]
+                    self.__dict__[key] = copy.deepcopy(dict_config[key])
             else:
-                self.__setitem__(key, dict_config[key])
+                self.__setitem__(key, copy.deepcopy(dict_config[key]))
         return self
 
     @classmethod
@@ -96,5 +112,13 @@ class Config(object):
             if isinstance(config[key], Config):
                 out[key] = cls.extraction_dictionary(config[key])
             else:
-                out[key] = config[key]
+                out[key] = copy.deepcopy(config[key])
         return out
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, copy.deepcopy(v, memo))
+        return result

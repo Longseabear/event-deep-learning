@@ -12,7 +12,7 @@ print('Property: ', torch.cuda.get_device_properties(0))
 def main(configs):
     config = None
     if isinstance(configs, list):
-        config = App.make_from_config_list(config_list_paths).config
+        config = App.make_from_config_list(configs).config
     else:
         config = App.instance(configs).config
         App.instance().update()

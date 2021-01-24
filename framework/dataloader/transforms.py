@@ -1,5 +1,10 @@
 import numpy
 from framework.dataloader.TensorTypes import *
+
+"""
+Basic transform methods
+"""
+
 class Transforms(object):
     def __init__(self, required=[], meta={}):
         self.required = required

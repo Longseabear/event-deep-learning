@@ -2,8 +2,8 @@ import torch
 from utils.runtime import get_instance_from_name, get_class_object_from_name
 from utils.config import Config
 from framework.app.app import App
+from framework.app.Format import *
 import os
-
 
 class BaseModel(torch.nn.Module):
     def __init__(self, config):
@@ -31,26 +31,35 @@ class BaseModel(torch.nn.Module):
             samples[name] = samples[name].to(device=App.instance().get_device()).float()
         return samples
 
+    def get_name_format(self, controller):
+        f = MainStateBasedFormatter(controller, {'model_name': App.instance().name, 'time': App.instance().time_format()},'[$time]_[$model_name]_[$main:epoch:03]_[$main:step:08].model')
+        return f.Formatting()
+
     def save(self, info):
         dst = info['path']
+        App.instance().make_save_dir(dst)
+
         file_names = os.listdir(dst)
         previous_file_name = None
         for name in file_names:
             _, file_extension = os.path.splitext(name)
             if file_extension == 'model':
                 epoch = name.split('_')[-2]
-                if int(epoch) == info['state'].epoch:
+                if int(epoch) == info['controller'].get_main_state().epoch:
                     previous_file_name = name
 
-        torch.save(self.state_dict(), os.path.join(dst, self.get_save_name(info['state'])))
+        saved_data = {'data': self.state_dict(), 'config': Config.extraction_dictionary(self.config)}
+        saved_path = os.path.join(dst, self.get_name_format(info['controller']))
+        torch.save(saved_data, saved_path)
         if previous_file_name is not None:
             os.remove(os.path.join(dst, previous_file_name))
 
+        App.instance().set_variables('$latest_{}'.format(info['module_name']), saved_path)
+
     def load(self, info):
-        self.load_state_dict(torch.load(info['path']))
-
-    def get_save_name(self, state):
-        return App.instance().name_format(App.instance().name) + "_{}_{}.model".format(state.epoch, state.step)
-
-    def get_dir(self, state, dir_path):
-        pass
+        path = info['path']
+        state_dict = torch.load(path)
+        if info.get('config_load', False):
+            del self.config
+            self.config = Config.from_dict(state_dict['config'])
+        self.load_state_dict(state_dict['data'], strict=info['load_strict'])

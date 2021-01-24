@@ -3,8 +3,12 @@ App:
   EXPERIMENT_NAME: 'scenario1'
   device: cuda # *
   gpu_ids: [0] # *
+  DEBUG: True
   parallel: 'data' #  model
-  save_dir: 'resource/output/'
+  Variables:
+    base: ''
+    directory_root: 'resource/output/'
+
   mode: 'new' # new, finetuning, resume
 
 MODEL_CONTROLLER:

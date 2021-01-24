@@ -8,17 +8,24 @@ from framework.dataloader.Transform import TRANSFORM
 import copy
 
 class DataLoaderController(SingletoneInstance):
-    ''':key
-    DataLoaderController depends on App.
-    '''
     def __init__(self):
+        """
+        DataLoaderController: SingletoneInstance
+        This class self.dataloader_config is [configuration safe]
+        """
         self.dataloader_config = App.instance().config.DATA_LOADER
         self.dataloaders = {}
 
-#        self.make_datasets(self.dataloader_config)
+    def make_dataset(self, loader_name: str, dataloader_config=None):
+        """
+        This function injects the DataLoader class into self.dataloaders.
 
-    def make_dataset(self, loader_name, dataloader_config=None):
-        default_loader = self.dataloader_config.required_loader['default'].copy()
+        :rtype: torch.utils.data.DataLoader
+        :param loader_name: The name of the data loader
+        :param dataloader_config: Configuration for dataloader
+        :return: dataloader class object
+        """
+        default_loader = copy.deepcopy(self.dataloader_config.required_loader['default'])
 
         try:
             if dataloader_config is None:
@@ -39,6 +46,7 @@ class DataLoaderController(SingletoneInstance):
         dataset_class = dataset_config.class_name
         dataset_module: BaseDataset = get_class_object_from_name(dataset_module, dataset_class)
 
+        # dataloader_config
         dataset_args = {}
         dataset_args['name'] = loader_name
         if 'dataset_args' in dataloader_config.keys():
@@ -57,6 +65,11 @@ class DataLoaderController(SingletoneInstance):
         return self.dataloaders[loader_name]
 
     def dataloaderFactory(self, dataset, config):
+        """
+        :param dataset: Required Type: BaseDataset
+        :param config: Config or Dictionary
+        :return:
+        """
         class CustomDataLoader(torch.utils.data.DataLoader):
             def __init__(self, dataset, config, **kwargs):
                 super(CustomDataLoader, self).__init__(dataset, **kwargs)

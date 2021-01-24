@@ -34,6 +34,7 @@ class ModelStateController(object):
                 self.current_state = self.states[loader_name]
 
     def pop_state(self):
+        del self.states[self.processing_stack[-1][0]]
         self.processing_stack.pop()
         self.current_state = self.states[self.processing_stack[-1][0]] if len(self.processing_stack)>0 else None
 
@@ -64,6 +65,8 @@ class ModelController(SingletoneInstance):
         self.COMMAND_CONTROLLER = CommandController(self.config.COMMAND_CONTROLLER.command_path, self)
         self.MODEL_STATE_CONTROLLER = ModelStateController(self.config.MODEL_STATE_CONTROLLER)
         self.sample = None
+
+        self.all_callable = [method_name for method_name in dir(self) if callable(getattr(self, method_name))]
 
     @classmethod
     def controller_factory(cls, config=None):

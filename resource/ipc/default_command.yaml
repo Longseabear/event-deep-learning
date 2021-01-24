@@ -1,4 +1,4 @@
-DEFAULT: [TRAINING_LOADER->PrintAllState, VALIDATION_LOADER, train_step->PRINT, val_step]
+DEFAULT: [TRAINING_LOADER, TRAINING_SAVE->TRAINING_LOAD, VALIDATION_LOADER, train_step->PRINT, val_step]
 
 COMMAND_DEFINE:
   TRAINING_LOADER:
@@ -9,6 +9,29 @@ COMMAND_DEFINE:
     args: {}
     repeat: 1
     when: step # EPOCH:1
+
+  TRAINING_LOAD:
+    command: 'ModuleLoadClass'
+    required: ['MODEL']
+    state_name: 'EPOCH_END'
+    loader_name: training
+    args:
+      MODEL:
+        path: $latest
+        config_load: False
+    repeat: -1
+    when: step # EPOCH:1
+
+  TRAINING_SAVE:
+    command: 'ModuleSaveClass'
+    required: ['MODEL']
+    state_name: 'EPOCH_END'
+    loader_name: training
+    args:
+      MODEL: {}
+    repeat: -1
+    when: step # EPOCH:1
+
   VALIDATION_LOADER:
     command: 'PushModelStateCommand'
     required: ['validation']
@@ -57,7 +80,7 @@ COMMAND_DEFINE:
     command: 'BatchedImageShowCommand'
     required: ['OUTPUT']
     args: {
-        batch_number: 0
+      batch_number: 0
     }
     state_name: EPOCH_END
     loader_name: training
@@ -66,11 +89,9 @@ COMMAND_DEFINE:
   TRAINING_OUTPUT_SAVE:
     command: 'BatchedImageSaveCommand'
     required: ['OUTPUT']
-    args: {
-      base_path: null,
-      folder_name: null,
-      format: null
-    }
+    args:
+      path: '$base/visual/img'
+      format: 'png'
     state_name: BATCH_END
     loader_name: training
     repeat: -1
