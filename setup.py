@@ -8,7 +8,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="deep-leaps",
-    version="0.0.1",
+    version="0.0.2",
     author="Leaps",
     author_email="leap1568@gmail.com",
     description="Data driven development based deep learning framework(pytorch)",
@@ -16,6 +16,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/Longseabear/deep-leaps-pytorch.git",
     packages=setuptools.find_packages(),
+    download_url='https://github.com/Longseabear/deep-leaps-pytorch/archive/0.0.2.tar.gz',
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
