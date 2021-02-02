@@ -1,17 +1,14 @@
-DEFAULT: [TRAINING_LOADER, TRAINING_SAVE->TRAINING_LOAD, VALIDATION_LOADER, train_step->PRINT, val_step]
+#DEFAULT: [$root(($TRAINING_EPOCH(TEST->$LEARNING(B->$C->A)))->PRINT()->$SAVE2($SAVE(U))->STATE(*PrintCommand->*PrintCommand)->STATE(*PrintCommand)->LEARNING(A->B->C)), $TRAINING_BATCH(E->F->$C->D)]
+ADD: [$root(SAVE(SAVE1(SAVE2(U)->SAVE2()->SAVE1())))]
+
+#DEFAULT: [$root($TRAINING_EPOCH)]
 # "IDLE: STATE(TRAINING)"
 # TRIANING: TRAINING_EPOCH() -> SAVE() -> TESTING()
 # TRAINING_EPOCH: RUN->GRAPH(TRAINING_BATCH)->SAVE->STATE(TESTING) 1
+# 언제까지 수행? -> StopIteration
 # TRAINING_BATCH: RUN->PRINT_LOSS # 1번(parent state)
 # TESTING: RUN->PRINT_LOSS
-# $TRAINING(10){a->b->c->d->e->g}->
-# 문법, $training($TRAINING_LOADER->$TRAINING->$1)->$graph(NODE->NODE->TRAINING_BATCH(A->B->C, B->C, D->E))
-#      $->로 연결관계를 표현가능. ()는 Graph를 의미한다 // $는 변수, $가 없으면 중복적으로 사용가능하다.
-#      *PushModelStateCommand은 단발성 command를 수행한다. repeat는 1이며 바로제거 됨
-#
-# $root->($TRAINING_LOADER->$MODEL_LOAD()->$SET_EPOCH->$TRAINING_EPOCH()->$TEST_LOADER->$TESTING_EPOCH())
-# $TRAINING_EPOCH(PRINT_STATE->$TRAINING_BATCH($RUN->$LOSS_PRINT)->$TRAINING_SAVE)
-# 만약 $이 붙어있지 않으면, 새로운 객체를 생성.
+# 동작, 위상정렬 방식으로 동작한다?
 # NODE:
 #   command:
 #   rerquired:
@@ -26,16 +23,75 @@ DEFAULT: [TRAINING_LOADER, TRAINING_SAVE->TRAINING_LOAD, VALIDATION_LOADER, trai
 #
 # Graph는 repeat만큼 반복을 수행한다. 이때, 만약 자기 자신이 parent와 동일한 경우, 내부의 모든 객체는 파괴된다.
 # Node는 repeat만큼 수행된 후 종료된다.
-GRAPH_DEFINE:
-  TRAINING:
-    args: {}
-    repeat: 10 # 10번 반복
-    run_cycle: ''
+DEFINE:
+  PRINT:
+    command: 'PrintCommand'
+    required: []
+    args: {
+            content: 'hello world'
+    }
+    repeat: 3 # 10번 반복
+    run_cycle: '$main'
+
+  TRAINING_EPOCH:
+    command: 'RunnableGraph'
+    repeat: 10
+    finish: True
+
+  TRAINING_BATCH:
+    command: 'RunnableGraph'
+    inherit: PRINT
+
+  TEST:
+    inherit: PRINT
+
+  LEARNING:
+    command: 'RunnableGraph'
+    inherit: PRINT
+    repeat: 3
+    finish: True
+
+  SAVE:
+    command: 'RunnableGraph'
+    inherit: PRINT
+    repeat: 3
+
+  SAVE1:
+    command: 'RunnableGraph'
+    inherit: PRINT
+    repeat: 1
+
+  SAVE2:
+    command: 'RunnableGraph'
+    inherit: PRINT
+    repeat: 2
+
+  STATE:
+    command: 'RunnableGraph'
+    inherit: PRINT
 
   BATCH_EPOCH:
     args: {}
     repeat: 1 # IterStop을 기다림, 내 현재 처리중인 GRAPH의 repeat가 -1이라면, raise IterStop
     run_cycle: '' # $main $ngraph $my
+
+  TESTING:
+    inherit: PRINT
+  A:
+    inherit: PRINT
+  B:
+    inherit: PRINT
+  C:
+    inherit: PRINT
+  D:
+    inherit: PRINT
+  E:
+    inherit: PRINT
+  F:
+    inherit: PRINT
+  U:
+    inherit: PRINT
+    run_cycle: '$self:20'
 
 COMMAND_DEFINE:
   NEW_TYPE:

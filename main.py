@@ -4,10 +4,13 @@ from framework.dataloader.DataLoader import DataLoaderController
 from framework.trainer.ModelController import ModelController, ModelState
 from framework.ipc.ThreadCommand import MultipleProcessorController
 from utils.config import Config
+import sys
+import os
 
 print('Device id: ', torch.cuda.current_device())
 print('Available: ', torch.cuda.is_available())
 print('Property: ', torch.cuda.get_device_properties(0))
+print(os.environ['DISPLAY'])
 
 def main(configs):
     config = None
@@ -21,7 +24,8 @@ def main(configs):
     trainer: ModelController = ModelController.controller_factory()
 
     try:
-        trainer.run()
+        # trainer.run()
+        trainer.COMMAND_CONTROLLER.run()
     except Exception as e:
         print(e)
     finally:

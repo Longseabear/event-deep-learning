@@ -1,9 +1,10 @@
 from framework.app.app import App, SingletoneInstance
 from pyparsing import nestedExpr
 import re
+import os
 
 class Formatter():
-    def __init__(self, controller, contents={}, format=''):
+    def __init__(self, runnable_controller, contents={}, format=''):
         """
         Manages various formats.
         This class is dependent on the current Controller and configuration safe.
@@ -16,7 +17,7 @@ class Formatter():
             print(f.Formatting())
             -> model_checkpoint.exe
         """
-        self.model_controller = controller
+        self.runnable_controller = runnable_controller
         self.contents = contents
         self.format = format
 
@@ -38,18 +39,13 @@ class Formatter():
             format = variable.split(':')
             if len(format)==1:
                 return self.contents[variable[1:]] if variable[0]=='$' else variable
-            state = format[0][1:]
+            state = format[0]
             var = format[1]
             zfill = 1
             if len(format)>2:
                 zfill = int(format[2])
-            if state=='main':
-                model_state = self.model_controller.get_main_state()
-            elif state=='now':
-                model_state = self.model_controller.get_state()
-            else:
-                raise NotImplementedError
-            return str(model_state.__getattribute__(var)).zfill(zfill)
+            module = self.runnable_controller.get_runnable_module(state)
+            return str(module.__getattribute__(var)).zfill(zfill)
         except Exception as e:
             raise e
 
@@ -104,13 +100,8 @@ class Formatter():
             raise e
 
 class MainStateBasedFormatter(Formatter):
-    def __init__(self, controller, contents={}, format=''):
-        """
-        Formatter's wrapper function. if main state == current state, all current state name replace to main.
-        """
-        if controller.get_main_state() == controller.get_state():
-            format.replace('now:', 'main:')
-        super().__init__(controller, contents, format)
+    def __init__(self, runnable_controller, contents={}, format=''):
+        super().__init__(runnable_controller, contents, format)
 
 if __name__ == '__main__':
     f = Formatter(None, contents={'content':'cdef','batch':523,'format':'exe'},format='[$content]_[$batch]_checkpoint.[$format]')
@@ -118,3 +109,19 @@ if __name__ == '__main__':
     f = Formatter(None, contents={'content':'asdasd','batch':523,'format':'exe'},format='[$content]_[$batch]_checkpoint.[$format]')
     b = f.Formatting()
     print(f.CheckSameBaseName(a,b))
+
+
+'''
+    @staticmethod
+    def variable_name_parsing(line, separator='$'):
+        i = 0
+        if line[0] == separator:
+            i+=1
+        temp = ''
+        while i < len(line):
+            if not (temp + line[i]).isidentifier():
+                break
+            temp += line[i]
+            i+=1
+        return temp, i
+'''

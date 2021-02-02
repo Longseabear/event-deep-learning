@@ -32,7 +32,7 @@ class BaseModel(torch.nn.Module):
         return samples
 
     def get_name_format(self, controller):
-        f = MainStateBasedFormatter(controller, {'model_name': App.instance().name, 'time': App.instance().time_format()},'[$time]_[$model_name]_[$main:epoch:03]_[$main:step:08].model')
+        f = MainStateBasedFormatter(controller, {'model_name': App.instance().name, 'time': App.instance().time_format()},'[$time]_[$model_name]_[$main:step:03]_[$main:total_step:08].model')
         return f.Formatting()
 
     def save(self, info):
@@ -45,7 +45,7 @@ class BaseModel(torch.nn.Module):
             _, file_extension = os.path.splitext(name)
             if file_extension == 'model':
                 epoch = name.split('_')[-2]
-                if int(epoch) == info['controller'].get_main_state().epoch:
+                if int(epoch) == info['controller'].get_current_main_module():
                     previous_file_name = name
 
         saved_data = {'data': self.state_dict(), 'config': Config.extraction_dictionary(self.config)}

@@ -5,6 +5,7 @@ from framework.dataloader.Dataset import BaseDataset
 from utils.runtime import get_class_object_from_name
 from framework.trainer.losses import LossContainer
 from framework.ipc.Command import CommandController
+from framework.ipc.RunningGraphController import RunnableModuleController
 from tqdm import tqdm
 import torch
 import torch
@@ -14,35 +15,6 @@ import time
 ModelState: START -> EPOCH_START -> BATCH_START -> BATCH_END -> EPOCH_END -> TERMINATE
                           |-----------------------------------------|
 '''
-class ModelStateController(object):
-    def __init__(self, config):
-        self.current_state: ModelState = ModelState(loader_name='idle')
-        self.config = config
-        self.states = {}
-        self.processing_stack = []
-
-        #IDLE INIT
-        self.processing_stack.append(('idle',None))
-        self.states['idle'] = self.current_state
-
-    def push_state(self, args):
-        for loader_name, config in args:
-            if (loader_name, config) not in self.processing_stack:
-                self.processing_stack.append((loader_name, config))
-                self.states[loader_name] = ModelState(loader_name=loader_name)
-                DataLoaderController.instance().make_dataset(loader_name, config)
-                self.current_state = self.states[loader_name]
-
-    def pop_state(self):
-        del self.states[self.processing_stack[-1][0]]
-        self.processing_stack.pop()
-        self.current_state = self.states[self.processing_stack[-1][0]] if len(self.processing_stack)>0 else None
-
-    def iterator_reset(self):
-        self.current_state.tqdm = tqdm(DataLoaderController.instance().dataloaders[self.current_state.loader_name],
-                                       bar_format='{l_bar}{bar:10}{r_bar}', ascii=True)
-        self.current_state.iter = iter(self.current_state.tqdm)
-
 
 class ModelState(object):
     def __init__(self, name='START', step=1, epoch=0, loader_name='global'):
@@ -62,8 +34,8 @@ class ModelController(SingletoneInstance):
         self.OPTIMIZER: torch.nn.Module = None
         self.LOSSES: torch.nn.Module = App.instance().set_gpu_device(LossContainer(self.config.LOSSES))
 
-        self.COMMAND_CONTROLLER = CommandController(self.config.COMMAND_CONTROLLER.command_path, self)
-        self.MODEL_STATE_CONTROLLER = ModelStateController(self.config.MODEL_STATE_CONTROLLER)
+#        self.COMMAND_CONTROLLER = CommandController(self.config.COMMAND_CONTROLLER.command_path, self)
+        self.COMMAND_CONTROLLER = RunnableModuleController(self.config.COMMAND_CONTROLLER, self)
         self.sample = None
 
         self.all_callable = [method_name for method_name in dir(self) if callable(getattr(self, method_name))]

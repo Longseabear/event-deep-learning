@@ -56,3 +56,4 @@ class MultipleProcessorController(SingletoneInstance):
         process: ProcessWrapper = self.processes[name]
         for data in datas:
             process.queue.put(data)
+

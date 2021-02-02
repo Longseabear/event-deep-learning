@@ -9,12 +9,14 @@ App:
     base: ''
     directory_root: 'resource/output/'
 
-  mode: 'new' # new, finetuning, resume
+  mode: 'new' # new, finetuning, resume if mode is finetuning, variables.pre is previous base root
 
 MODEL_CONTROLLER:
   COMMAND_CONTROLLER:
-    command_path: 'resource/ipc/default_command.yaml'
-
+    command_path: 'resource/ipc/default_runnable_command.yaml'
+    ipc_host: '127.0.0.1'
+    ipc_port: 1568
+    
   MODEL_STATE_CONTROLLER: {}
   OPTIMIZER:
     # ADAM

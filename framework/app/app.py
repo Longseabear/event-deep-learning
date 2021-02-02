@@ -91,6 +91,7 @@ class App(SingletoneInstance):
 
         if self.mode == 'finetuning':
             if os.path.exists(os.path.join(base, model_name, experiment_name)):
+                self._variables.pre = os.path.join(base, model_name, experiment_name)
                 experiment_name = self.name_format(experiment_name)
             base_path = os.path.join(base, model_name, experiment_name)
             self._variables.base = base_path
@@ -186,7 +187,11 @@ class App(SingletoneInstance):
         This function affects os (create file)
         :param path:
         """
-        os.makedirs(os.path.join(*self.variable_parsing(path, '/')), exist_ok=True)
+        os.makedirs(self.dir_path_parser(path), exist_ok=True)
+
+    @staticmethod
+    def dir_path_parser(path):
+        return ('/' if path.startswith('/') else '') + os.path.join(*App.instance().variable_parsing(path, '/'))
 
     def smart_write(self, contents, dst, mode=None):
         """
@@ -223,4 +228,4 @@ class App(SingletoneInstance):
         :param sep:
         :return:
         """
-        return [copy.deepcopy(self.get_variables(p)) if p[0] == '$' else p for p in string.split(sep)]
+        return [copy.deepcopy(self.get_variables(p)) if p[0] == '$' else p for p in string.split(sep) if len(p)>0]

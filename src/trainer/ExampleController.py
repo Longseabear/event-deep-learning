@@ -6,6 +6,7 @@ from framework.model.BaseModel import BaseModel
 from framework.app.app import App
 from tqdm import tqdm
 import torch
+from framework.app.Exceptions import *
 
 class ExampleContoller(ModelController):
     def __init__(self):
@@ -19,29 +20,34 @@ class ExampleContoller(ModelController):
             self.OPTIMIZER = make_optimizer(self.config.OPTIMIZER, self.MODEL)
 
         self.all_callable = [method_name for method_name in dir(self) if callable(getattr(self, method_name))]
+        self.sample = None
+
+    def step(self, sample):
+        self.sample = sample
+        self.sample = self.MODEL(self.sample)
 
     def train(self):
         try:
-            model_state = self.get_state()
-            self.sample = next(model_state.iter)
-            self.sample = self.MODEL(self.sample)
+            main_graph = self.COMMAND_CONTROLLER.get_current_main_module()
+            self.step(next(main_graph.iter))
             self.OPTIMIZER.zero_grad()
             loss = self.LOSSES(self.sample)
-            model_state.tqdm.set_postfix_str("loss: {}".format(loss))
             loss.backward()
             self.OPTIMIZER.step()
+            main_graph.tqdm.set_postfix_str("loss: {}".format(loss))
+            main_graph.total_step += 1
         except StopIteration:
-            return {'state_name': 'EPOCH_END'}
+            raise MainGraphStepInterrupt
         return
 
     def test(self):
         try:
             with torch.no_grad():
-                model_state = self.get_state()
-                self.sample = next(model_state.iter)
-                self.sample = self.MODEL(self.sample)
+                main_graph = self.COMMAND_CONTROLLER.get_current_main_module()
+                self.step(next(main_graph.iter))
                 loss = self.LOSSES(self.sample)
-                model_state.tqdm.set_postfix_str("loss: {}".format(loss))
+                main_graph.tqdm.set_postfix_str("loss: {}".format(loss))
+                main_graph.total_step += 1
         except StopIteration:
-            return {'state_name': 'EPOCH_END'}
+            raise MainGraphStepInterrupt
         return
