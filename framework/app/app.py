@@ -1,5 +1,4 @@
-from utils.config import Config
-import torch
+from framework.utils.config import Config
 import numpy as np
 import logging
 import logging.config
@@ -8,7 +7,7 @@ import sys
 import copy
 import torch
 import os
-import time
+
 DEFAULT_CONFIG_PATH = "{}/default_config.yaml".format(os.path.dirname(os.path.abspath( __file__ )))
 class SingletoneInstance:
     __instance = None

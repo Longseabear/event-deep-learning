@@ -1,9 +1,7 @@
 import torch
-import torch.optim as optim
-import torch.optim.lr_scheduler as lrs
 from framework.app.app import App
-from utils.runtime import get_instance_from_name, get_class_object_from_name
-from utils.config import Config
+from framework.utils.runtime import get_class_object_from_name
+from framework.utils.config import Config
 import os
 
 def make_optimizer(args, model):

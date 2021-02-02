@@ -1,7 +1,6 @@
 import torch
-from utils.runtime import get_instance_from_name, get_class_object_from_name
-from utils.config import Config
-from framework.app.app import App
+from framework.utils.runtime import get_class_object_from_name
+from framework.utils.config import Config
 from framework.app.Format import *
 import os
 

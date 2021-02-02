@@ -3,7 +3,7 @@ import copy
 from framework.app.Format import *
 from collections import defaultdict
 from framework.ipc.ThreadCommand import *
-from utils.config import Config
+from framework.utils.config import Config
 from framework.dataloader.DataLoader import DataLoaderController
 import traceback
 from framework.app.Exceptions import *

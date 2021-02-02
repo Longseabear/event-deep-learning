@@ -2,7 +2,6 @@ import torch
 from framework.model.BaseModel import *
 from framework.app.app import App
 
-
 class SimpleLayer(BaseModel):
     def __init__(self, config):
         super().__init__(config)

@@ -1,10 +1,8 @@
 import torch
 from framework.app.app import App
 from framework.dataloader.DataLoader import DataLoaderController
-from framework.trainer.ModelController import ModelController, ModelState
+from framework.trainer.ModelController import ModelController
 from framework.ipc.ThreadCommand import MultipleProcessorController
-from utils.config import Config
-import sys
 import os
 
 print('Device id: ', torch.cuda.current_device())

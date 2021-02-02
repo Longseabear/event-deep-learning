@@ -1,5 +1,3 @@
-from utils.config import Config
-from framework.app.app import App
 import torch
 torch.set_printoptions(precision=32)
 

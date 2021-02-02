@@ -1,11 +1,10 @@
 import torch
 import torch.nn as nn
-from typing import *
 from abc import abstractmethod
-from utils.config import Config
+from framework.utils.config import Config
 from framework.app.app import App
 import os
-import sys
+
 
 class LossFactory(object):
     @staticmethod
